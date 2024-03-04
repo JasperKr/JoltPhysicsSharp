@@ -1126,7 +1126,8 @@ JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create2(
     const JPH_RVec3* position,
     const JPH_Quat* rotation,
     JPH_MotionType motionType,
-    JPH_ObjectLayer objectLayer)
+    JPH_ObjectLayer objectLayer,
+	JPH_Bool32 allowDynamicOrKinematic)
 {
     JPH::ShapeSettings* joltShapeSettings = reinterpret_cast<JPH::ShapeSettings*>(shapeSettings);
     auto bodyCreationSettings = new JPH::BodyCreationSettings(
@@ -1136,6 +1137,7 @@ JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create2(
         (JPH::EMotionType)motionType,
         objectLayer
     );
+    bodyCreationSettings->mAllowDynamicOrKinematic = allowDynamicOrKinematic == 1;
     return reinterpret_cast<JPH_BodyCreationSettings*>(bodyCreationSettings);
 }
 
@@ -1144,7 +1146,8 @@ JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create3(
     const JPH_RVec3* position,
     const JPH_Quat* rotation,
     JPH_MotionType motionType,
-    JPH_ObjectLayer objectLayer)
+    JPH_ObjectLayer objectLayer,
+	JPH_Bool32 allowDynamicOrKinematic)
 {
     const JPH::Shape* joltShape = reinterpret_cast<const JPH::Shape*>(shape);
     auto bodyCreationSettings = new JPH::BodyCreationSettings(
@@ -1154,6 +1157,7 @@ JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create3(
         (JPH::EMotionType)motionType,
         objectLayer
     );
+    bodyCreationSettings->mAllowDynamicOrKinematic = allowDynamicOrKinematic == 1;
     return reinterpret_cast<JPH_BodyCreationSettings*>(bodyCreationSettings);
 }
 void JPH_BodyCreationSettings_Destroy(JPH_BodyCreationSettings* settings)

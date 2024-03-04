@@ -526,12 +526,14 @@ JPH_CAPI JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create2(JPH_ShapeSet
     const JPH_RVec3* position,
     const JPH_Quat* rotation,
     JPH_MotionType motionType,
-    JPH_ObjectLayer objectLayer);
+    JPH_ObjectLayer objectLayer,
+	JPH_Bool32 allowDynamicOrKinematic);
 JPH_CAPI JPH_BodyCreationSettings* JPH_BodyCreationSettings_Create3(const JPH_Shape* shape,
     const JPH_RVec3* position,
     const JPH_Quat* rotation,
     JPH_MotionType motionType,
-    JPH_ObjectLayer objectLayer);
+    JPH_ObjectLayer objectLayer,
+	JPH_Bool32 allowDynamicOrKinematic);
 JPH_CAPI void JPH_BodyCreationSettings_Destroy(JPH_BodyCreationSettings* settings);
 
 JPH_CAPI void JPH_BodyCreationSettings_GetLinearVelocity(JPH_BodyCreationSettings* settings, JPH_Vec3* velocity);
