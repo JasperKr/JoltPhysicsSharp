@@ -15,13 +15,13 @@ public sealed class SoftBodyCreationSettings : NativeObject
     /// <summary>
     /// Finalizes an instance of the <see cref="SoftBodyCreationSettings" /> class.
     /// </summary>
-    ~SoftBodyCreationSettings() => Dispose(isDisposing: false);
+    ~SoftBodyCreationSettings() => Dispose(disposing: false);
 
-    protected override void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
-        if (isDisposing)
+        if (disposing)
         {
-            //JPH_SoftBodyCreationSettings_Destroy(Handle);
+            JPH_SoftBodyCreationSettings_Destroy(Handle);
         }
     }
 }

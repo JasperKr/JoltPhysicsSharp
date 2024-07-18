@@ -33,10 +33,6 @@ __pragma(warning(push, 0))
 __pragma(warning(pop))
 #endif
 
-#ifdef JPH_COMPILER_GCC
-JPH_GCC_SUPPRESS_WARNING("-Winvalid-offsetof")
-#endif
-
 #define ENSURE_SIZE_ALIGN(type0, type1) \
     static_assert(sizeof(type0) == sizeof(type1)); \
     static_assert(alignof(type0) == alignof(type1))
@@ -74,6 +70,59 @@ static_assert(JPH_ValidateResult_AcceptContact == (int)JPH::ValidateResult::Acce
 static_assert(JPH_ValidateResult_RejectContact == (int)JPH::ValidateResult::RejectContact);
 static_assert(JPH_ValidateResult_RejectAllContactsForThisBodyPair == (int)JPH::ValidateResult::RejectAllContactsForThisBodyPair);
 
+// EShapeType
+static_assert(JPH_ShapeType_Convex == (int)JPH::EShapeType::Convex);
+static_assert(JPH_ShapeType_Compound == (int)JPH::EShapeType::Compound);
+static_assert(JPH_ShapeType_Decorated == (int)JPH::EShapeType::Decorated);
+static_assert(JPH_ShapeType_Mesh == (int)JPH::EShapeType::Mesh);
+static_assert(JPH_ShapeType_HeightField == (int)JPH::EShapeType::HeightField);
+static_assert(JPH_ShapeType_SoftBody == (int)JPH::EShapeType::SoftBody);
+static_assert(JPH_ShapeType_User1 == (int)JPH::EShapeType::User1);
+static_assert(JPH_ShapeType_User2 == (int)JPH::EShapeType::User2);
+static_assert(JPH_ShapeType_User3 == (int)JPH::EShapeType::User3);
+static_assert(JPH_ShapeType_User4 == (int)JPH::EShapeType::User4);
+
+// EShapeSubType
+static_assert(JPH_ShapeSubType_Sphere == (int)JPH::EShapeSubType::Sphere);
+static_assert(JPH_ShapeSubType_Box == (int)JPH::EShapeSubType::Box);
+static_assert(JPH_ShapeSubType_Triangle == (int)JPH::EShapeSubType::Triangle);
+static_assert(JPH_ShapeSubType_Capsule == (int)JPH::EShapeSubType::Capsule);
+static_assert(JPH_ShapeSubType_TaperedCapsule == (int)JPH::EShapeSubType::TaperedCapsule);
+static_assert(JPH_ShapeSubType_Cylinder == (int)JPH::EShapeSubType::Cylinder);
+static_assert(JPH_ShapeSubType_ConvexHull == (int)JPH::EShapeSubType::ConvexHull);
+static_assert(JPH_ShapeSubType_StaticCompound == (int)JPH::EShapeSubType::StaticCompound);
+static_assert(JPH_ShapeSubType_MutableCompound == (int)JPH::EShapeSubType::MutableCompound);
+static_assert(JPH_ShapeSubType_RotatedTranslated == (int)JPH::EShapeSubType::RotatedTranslated);
+static_assert(JPH_ShapeSubType_Scaled == (int)JPH::EShapeSubType::Scaled);
+static_assert(JPH_ShapeSubType_OffsetCenterOfMass == (int)JPH::EShapeSubType::OffsetCenterOfMass);
+static_assert(JPH_ShapeSubType_Mesh == (int)JPH::EShapeSubType::Mesh);
+static_assert(JPH_ShapeSubType_HeightField == (int)JPH::EShapeSubType::HeightField);
+static_assert(JPH_ShapeSubType_SoftBody == (int)JPH::EShapeSubType::SoftBody);
+
+// EConstraintType
+static_assert(JPH_ConstraintType_Constraint == (int)JPH::EConstraintType::Constraint);
+static_assert(JPH_ConstraintType_TwoBodyConstraint == (int)JPH::EConstraintType::TwoBodyConstraint);
+
+// EConstraintSubType
+static_assert(JPH_ConstraintSubType_Fixed == (int)JPH::EConstraintSubType::Fixed);
+static_assert(JPH_ConstraintSubType_Point == (int)JPH::EConstraintSubType::Point);
+static_assert(JPH_ConstraintSubType_Hinge == (int)JPH::EConstraintSubType::Hinge);
+static_assert(JPH_ConstraintSubType_Slider == (int)JPH::EConstraintSubType::Slider);
+static_assert(JPH_ConstraintSubType_Distance == (int)JPH::EConstraintSubType::Distance);
+static_assert(JPH_ConstraintSubType_Cone == (int)JPH::EConstraintSubType::Cone);
+static_assert(JPH_ConstraintSubType_SwingTwist == (int)JPH::EConstraintSubType::SwingTwist);
+static_assert(JPH_ConstraintSubType_SixDOF == (int)JPH::EConstraintSubType::SixDOF);
+static_assert(JPH_ConstraintSubType_Path  == (int)JPH::EConstraintSubType::Path);
+static_assert(JPH_ConstraintSubType_Vehicle == (int)JPH::EConstraintSubType::Vehicle);
+static_assert(JPH_ConstraintSubType_RackAndPinion == (int)JPH::EConstraintSubType::RackAndPinion);
+static_assert(JPH_ConstraintSubType_Gear == (int)JPH::EConstraintSubType::Gear);
+static_assert(JPH_ConstraintSubType_Pulley == (int)JPH::EConstraintSubType::Pulley);
+
+static_assert(JPH_ConstraintSubType_User1 == (int)JPH::EConstraintSubType::User1);
+static_assert(JPH_ConstraintSubType_User2 == (int)JPH::EConstraintSubType::User2);
+static_assert(JPH_ConstraintSubType_User3 == (int)JPH::EConstraintSubType::User3);
+static_assert(JPH_ConstraintSubType_User4 == (int)JPH::EConstraintSubType::User4);
+
 // EActivation
 static_assert(sizeof(JPH::EConstraintSpace) == sizeof(JPH_ConstraintSpace));
 static_assert(JPH_ConstraintSpace_LocalToBodyCOM == (int)JPH::EConstraintSpace::LocalToBodyCOM);
@@ -109,6 +158,11 @@ static_assert(JPH_SixDOFConstraintAxis_RotationX == (int)JPH::SixDOFConstraintSe
 static_assert(JPH_SixDOFConstraintAxis_RotationY == (int)JPH::SixDOFConstraintSettings::EAxis::RotationY);
 static_assert(JPH_SixDOFConstraintAxis_RotationZ == (int)JPH::SixDOFConstraintSettings::EAxis::RotationZ);
 
+// JPH_SpringMode
+static_assert(sizeof(JPH_SpringMode) == sizeof(uint32_t));
+static_assert(JPH_SpringMode_FrequencyAndDamping == (int)JPH::ESpringMode::FrequencyAndDamping);
+static_assert(JPH_SpringMode_StiffnessAndDamping == (int)JPH::ESpringMode::StiffnessAndDamping);
+
 // EGroundState
 static_assert(sizeof(JPH::CharacterBase::EGroundState) == sizeof(JPH_GroundState));
 static_assert(JPH_GroundState_OnGround == (int)JPH::CharacterBase::EGroundState::OnGround);
@@ -116,12 +170,11 @@ static_assert(JPH_GroundState_OnSteepGround == (int)JPH::CharacterBase::EGroundS
 static_assert(JPH_GroundState_NotSupported == (int)JPH::CharacterBase::EGroundState::NotSupported);
 static_assert(JPH_GroundState_InAir == (int)JPH::CharacterBase::EGroundState::InAir);
 
+// EBackFaceMode
+static_assert(JPH_BackFaceMode_IgnoreBackFaces == (int)JPH::EBackFaceMode::IgnoreBackFaces);
+static_assert(JPH_BackFaceMode_CollideWithBackFaces == (int)JPH::EBackFaceMode::CollideWithBackFaces);
+
 static_assert(sizeof(JPH::SubShapeIDPair) == sizeof(JPH_SubShapeIDPair));
 static_assert(alignof(JPH::SubShapeIDPair) == alignof(JPH_SubShapeIDPair));
-
-ENSURE_SIZE_ALIGN(JPH::RayCastResult, JPH_RayCastResult);
-static_assert(offsetof(JPH::RayCastResult, mBodyID) == offsetof(JPH_RayCastResult, bodyID));
-static_assert(offsetof(JPH::RayCastResult, mFraction) == offsetof(JPH_RayCastResult, fraction));
-static_assert(offsetof(JPH::RayCastResult, mSubShapeID2) == offsetof(JPH_RayCastResult, subShapeID2));
 
 //static_assert(offsetof(JPH::MassProperties, mMass) == offsetof(JPH_MassProperties, mass));

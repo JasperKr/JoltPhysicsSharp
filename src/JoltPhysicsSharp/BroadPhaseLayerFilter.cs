@@ -8,35 +8,28 @@ namespace JoltPhysicsSharp;
 
 public abstract class BroadPhaseLayerFilter : NativeObject
 {
-    private static readonly Dictionary<IntPtr, BroadPhaseLayerFilter> s_listeners = new();
-    private static readonly JPH_BroadPhaseLayerFilter_Procs s_broadPhaseLayerFilter_Procs;
-
-    static unsafe BroadPhaseLayerFilter()
-    {
-        s_broadPhaseLayerFilter_Procs = new JPH_BroadPhaseLayerFilter_Procs
-        {
-            ShouldCollide = &ShouldCollideCallback,
-        };
-        JPH_BroadPhaseLayerFilter_SetProcs(s_broadPhaseLayerFilter_Procs);
-    }
+    private readonly JPH_BroadPhaseLayerFilter_Procs _broadPhaseLayerFilter_Procs;
 
     public BroadPhaseLayerFilter()
         : base(JPH_BroadPhaseLayerFilter_Create())
     {
-        s_listeners.Add(Handle, this);
+        nint ctx = DelegateProxies.CreateUserData(this, true);
+        _broadPhaseLayerFilter_Procs = new JPH_BroadPhaseLayerFilter_Procs
+        {
+            ShouldCollide = &ShouldCollideCallback,
+        };
+        JPH_BroadPhaseLayerFilter_SetProcs(Handle, _broadPhaseLayerFilter_Procs, ctx);
     }
 
     /// <summary>
     /// Finalizes an instance of the <see cref="BodyFilter" /> class.
     /// </summary>
-    ~BroadPhaseLayerFilter() => Dispose(isDisposing: false);
+    ~BroadPhaseLayerFilter() => Dispose(disposing: false);
 
-    protected override void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
-        if (isDisposing)
+        if (disposing)
         {
-            s_listeners.Remove(Handle);
-
             JPH_BroadPhaseLayerFilter_Destroy(Handle);
         }
     }
@@ -44,9 +37,9 @@ public abstract class BroadPhaseLayerFilter : NativeObject
     protected abstract bool ShouldCollide(BroadPhaseLayer layer);
 
     [UnmanagedCallersOnly]
-    private static Bool32 ShouldCollideCallback(IntPtr listenerPtr, BroadPhaseLayer layer)
+    private static Bool32 ShouldCollideCallback(IntPtr context, BroadPhaseLayer layer)
     {
-        BroadPhaseLayerFilter listener = s_listeners[listenerPtr];
+        BroadPhaseLayerFilter listener = DelegateProxies.GetUserData<BroadPhaseLayerFilter>(context, out _);
         return listener.ShouldCollide(layer);
     }
 }

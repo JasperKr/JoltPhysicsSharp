@@ -1,4 +1,4 @@
-// Copyright © Amer Koleci and Contributors.
+// Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 using System.Numerics;
@@ -18,10 +18,7 @@ public sealed class BoxShapeSettings : ConvexShapeSettings
     /// </summary>
     ~BoxShapeSettings() => Dispose(disposing: false);
 
-    //public override Shape Create()
-    //{
-    //    return new BoxShape(JPH_BoxShapeSettings_CreateShape(Handle));
-    //}
+    public override Shape Create() => new BoxShape(this);
 }
 
 public sealed class BoxShape : ConvexShape
@@ -39,7 +36,7 @@ public sealed class BoxShape : ConvexShape
     /// <summary>
     /// Finalizes an instance of the <see cref="BoxShape" /> class.
     /// </summary>
-    ~BoxShape() => Dispose(isDisposing: false);
+    ~BoxShape() => Dispose(disposing: false);
 
     public Vector3 HalfExtent
     {
@@ -55,6 +52,6 @@ public sealed class BoxShape : ConvexShape
         JPH_BoxShape_GetHalfExtent(Handle, out halfExtent);
     }
 
-    public float Volume => JPH_BoxShape_GetVolume(Handle);
+    public new float Volume => JPH_BoxShape_GetVolume(Handle);
     public float ConvexRadius => JPH_BoxShape_GetConvexRadius(Handle);
 }

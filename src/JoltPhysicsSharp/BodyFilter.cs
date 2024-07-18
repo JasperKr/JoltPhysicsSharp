@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static JoltPhysicsSharp.JoltApi;
 
@@ -9,54 +8,47 @@ namespace JoltPhysicsSharp;
 
 public abstract class BodyFilter : NativeObject
 {
-    private static readonly Dictionary<IntPtr, BodyFilter> s_listeners = new();
-    private static readonly JPH_BodyFilter_Procs s_bodyFilter_Procs;
-
-    static unsafe BodyFilter()
-    {
-        s_bodyFilter_Procs = new JPH_BodyFilter_Procs
-        {
-            ShouldCollide = &ShouldCollideCallback,
-            ShouldCollideLocked = &ShouldCollideLockedCallback,
-        };
-        JPH_BodyFilter_SetProcs(s_bodyFilter_Procs);
-    }
+    private readonly JPH_BodyFilter_Procs _bodyFilter_Procs;
 
     public BodyFilter()
         : base(JPH_BodyFilter_Create())
     {
-        s_listeners.Add(Handle, this);
+        nint context = DelegateProxies.CreateUserData(this, true);
+        _bodyFilter_Procs = new JPH_BodyFilter_Procs
+        {
+            ShouldCollide = &ShouldCollideCallback,
+            ShouldCollideLocked = &ShouldCollideLockedCallback,
+        };
+        JPH_BodyFilter_SetProcs(Handle, _bodyFilter_Procs, context);
     }
 
     /// <summary>
     /// Finalizes an instance of the <see cref="BodyFilter" /> class.
     /// </summary>
-    ~BodyFilter() => Dispose(isDisposing: false);
+    ~BodyFilter() => Dispose(disposing: false);
 
-    protected override void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
-        if (isDisposing)
+        if (disposing)
         {
-            s_listeners.Remove(Handle);
-
             JPH_BodyFilter_Destroy(Handle);
         }
     }
 
     protected abstract bool ShouldCollide(BodyID bodyID);
     protected abstract bool ShouldCollideLocked(Body body);
-    
+
     [UnmanagedCallersOnly]
-    private static Bool32 ShouldCollideCallback(IntPtr listenerPtr, BodyID bodyID)
+    private static Bool32 ShouldCollideCallback(nint context, BodyID bodyID)
     {
-        BodyFilter listener = s_listeners[listenerPtr];
+        BodyFilter listener = DelegateProxies.GetUserData<BodyFilter>(context, out _);
         return listener.ShouldCollide(bodyID);
     }
 
     [UnmanagedCallersOnly]
-    private static Bool32 ShouldCollideLockedCallback(IntPtr listenerPtr, IntPtr body)
+    private static Bool32 ShouldCollideLockedCallback(nint context, nint body)
     {
-        BodyFilter listener = s_listeners[listenerPtr];
+        BodyFilter listener = DelegateProxies.GetUserData<BodyFilter>(context, out _);
         return listener.ShouldCollideLocked(body);
     }
 }

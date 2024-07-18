@@ -1,9 +1,11 @@
 // Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using static JoltPhysicsSharp.JoltApi;
 
 namespace JoltPhysicsSharp;
 
@@ -32,16 +34,14 @@ public struct MassProperties : IEquatable<MassProperties>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly bool Equals(MassProperties other)
     {
-        return Mass == other.Mass
-            && Inertia.Equals(other.Inertia)
-            ;
+        return Mass == other.Mass && Inertia.Equals(other.Inertia);
     }
 
     public static bool operator ==(MassProperties left, MassProperties right) => left.Equals(right);
     public static bool operator !=(MassProperties left, MassProperties right) => !left.Equals(right);
 
     /// <inheritdoc/>
-    public override readonly bool Equals(object? obj) => obj is MassProperties handle && Equals(handle);
+    public override readonly bool Equals([NotNullWhen(true)] object? obj) => obj is MassProperties handle && Equals(handle);
 
     /// <inheritdoc/>
     public override readonly int GetHashCode() => HashCode.Combine(Mass, Inertia);
@@ -88,5 +88,15 @@ public struct MassProperties : IEquatable<MassProperties>
             // Just set the mass
             Mass = mass;
         }
+    }
+
+    public unsafe void DecomposePrincipalMomentsOfInertia(out Matrix4x4 rotation, out Vector3 diagonal)
+    {
+        Unsafe.SkipInit(out rotation);
+
+        fixed (MassProperties* thisPtr = &this)
+        fixed (Matrix4x4* rotationPtr = &rotation)
+        fixed (Vector3* diagonalPtr = &diagonal)
+            JPH_MassProperties_DecomposePrincipalMomentsOfInertia(thisPtr, rotationPtr, diagonalPtr);
     }
 }

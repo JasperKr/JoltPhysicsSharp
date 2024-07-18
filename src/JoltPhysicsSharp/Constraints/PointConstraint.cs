@@ -2,11 +2,12 @@
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using static JoltPhysicsSharp.JoltApi;
 
 namespace JoltPhysicsSharp;
 
-public sealed class PointConstraintSettings : TwoBodyConstraintSettings
+public sealed unsafe class PointConstraintSettings : TwoBodyConstraintSettings
 {
     public PointConstraintSettings()
         : base(JPH_PointConstraintSettings_Create())
@@ -25,48 +26,56 @@ public sealed class PointConstraintSettings : TwoBodyConstraintSettings
 
     public ConstraintSpace Space
     {
-        get => JPH_PointConstraintSettings_GetSpace(Handle);
-        set => JPH_PointConstraintSettings_SetSpace(Handle, value);
+        get => JPH_FixedConstraintSettings_GetSpace(Handle);
+        set => JPH_FixedConstraintSettings_SetSpace(Handle, value);
     }
 
-    public Double3 Point1
+    public Vector3 Point1
     {
         get
         {
-            JPH_PointConstraintSettings_GetPoint1(Handle, out Double3 value);
-            return value;
+            Vector3 result;
+            JPH_PointConstraintSettings_GetPoint1(Handle, &result);
+            return result;
         }
         set
         {
-            JPH_PointConstraintSettings_SetPoint1(Handle, value);
+            JPH_PointConstraintSettings_SetPoint1(Handle, &value);
         }
     }
 
-    public Double3 Point2
+    public Vector3 Point2
     {
         get
         {
-            JPH_PointConstraintSettings_GetPoint2(Handle, out Double3 value);
-            return value;
+            Vector3 result;
+            JPH_PointConstraintSettings_GetPoint2(Handle, &result);
+            return result;
         }
         set
         {
-            JPH_PointConstraintSettings_SetPoint2(Handle, value);
+            JPH_PointConstraintSettings_SetPoint2(Handle, &value);
         }
     }
 
-    public void GetPoint1(out Double3 value)
+    public void GetPoint1(out Vector3 value)
     {
-        JPH_PointConstraintSettings_GetPoint1(Handle, out value);
+        Unsafe.SkipInit(out value);
+
+        fixed (Vector3* valuePtr = &value)
+            JPH_PointConstraintSettings_GetPoint1(Handle, valuePtr);
     }
 
-    public void GetPoint2(out Double3 value)
+    public void GetPoint2(out Vector3 value)
     {
-        JPH_PointConstraintSettings_GetPoint2(Handle, out value);
+        Unsafe.SkipInit(out value);
+
+        fixed (Vector3* valuePtr = &value)
+            JPH_PointConstraintSettings_GetPoint2(Handle, valuePtr);
     }
 }
 
-public sealed class PointConstraint : TwoBodyConstraint
+public sealed unsafe class PointConstraint : TwoBodyConstraint
 {
     internal PointConstraint(nint handle)
         : base(handle)
@@ -76,15 +85,24 @@ public sealed class PointConstraint : TwoBodyConstraint
     /// <summary>
     /// Finalizes an instance of the <see cref="PointConstraint" /> class.
     /// </summary>
-    ~PointConstraint() => Dispose(isDisposing: false);
+    ~PointConstraint() => Dispose(disposing: false);
 
-    public void SetPoint1(ConstraintSpace space, in Double3 value)
+    public void SetPoint1(ConstraintSpace space, in Vector3 value)
     {
-        JPH_PointConstraint_SetPoint1(Handle, space, in value);
+        fixed (Vector3* valuePtr = &value)
+            JPH_PointConstraint_SetPoint1(Handle, space, valuePtr);
     }
 
-    public void SetPoint2(ConstraintSpace space, in Double3 value)
+    public void SetPoint2(ConstraintSpace space, in Vector3 value)
     {
-        JPH_PointConstraint_SetPoint2(Handle, space, in value);
+        fixed (Vector3* valuePtr = &value)
+            JPH_PointConstraint_SetPoint2(Handle, space, valuePtr);
+    }
+
+    public Vector3 GetTotalLambdaPosition()
+    {
+        Vector3 result;
+        JPH_PointConstraint_GetTotalLambdaPosition(Handle, &result);
+        return result;
     }
 }

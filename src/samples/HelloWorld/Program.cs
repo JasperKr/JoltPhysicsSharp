@@ -33,11 +33,9 @@ public static class Program
 
     private static Body CreateFloor(in BodyInterface bodyInterface, float size = 200.0f)
     {
-        float scale = WorldScale;
-
         Body floor = bodyInterface.CreateBody(new BodyCreationSettings(
-            new BoxShapeSettings(scale * new Vector3(0.5f * size, 1.0f, 0.5f * size), 0.0f),
-            scale * new Double3(0.0, -1.0, 0.0),
+            new BoxShapeSettings(WorldScale * new Vector3(0.5f * size, 1.0f, 0.5f * size), 0.0f),
+            WorldScale * new Vector3(0.0f, -1.0f, 0.0f),
             Quaternion.Identity,
             MotionType.Static,
             Layers.NonMoving)
@@ -63,7 +61,7 @@ public static class Program
         ];
 
         const float cDensity = 1.5f;
-        ConvexHullShapeSettings settings = new ConvexHullShapeSettings(box)
+        ConvexHullShapeSettings settings = new(box)
         {
             Density = cDensity
         };
@@ -222,7 +220,7 @@ public static class Program
             // Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
             BoxShapeSettings floorShapeSettings = new(new Vector3(100.0f, 1.0f, 100.0f));
 
-            BodyCreationSettings floorSettings = new(floorShapeSettings, new Double3(0.0f, -1.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);
+            BodyCreationSettings floorSettings = new(floorShapeSettings, new Vector3(0.0f, -1.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);
 
             // Create the actual rigid body
             Body floor = bodyInterface.CreateBody(floorSettings);
@@ -230,7 +228,8 @@ public static class Program
             // Add it to the world
             bodyInterface.AddBody(floor, Activation.DontActivate);
 
-            BodyCreationSettings spherSettings = new(new SphereShape(0.5f), new Double3(0.0f, 2.0f, 0.0f), Quaternion.Identity, MotionType.Dynamic, Layers.Moving);
+            SphereShape sphereShape = new(0.5f);
+            BodyCreationSettings spherSettings = new(sphereShape, new Vector3(0.0f, 2.0f, 0.0f), Quaternion.Identity, MotionType.Dynamic, Layers.Moving);
             BodyID sphereID = bodyInterface.CreateAndAddBody(spherSettings, Activation.Activate);
 
             // Now you can interact with the dynamic body, in this case we're going to give it a velocity.
@@ -240,7 +239,22 @@ public static class Program
             //StackTest(bodyInterface);
 
             MeshShapeSettings meshShape = CreateTorusMesh(3.0f, 1.0f);
-            BodyCreationSettings bodySettings = new(meshShape, new Double3(0, 10, 0), Quaternion.Identity, MotionType.Dynamic, Layers.Moving);
+            BodyCreationSettings bodySettings = new(meshShape, new Vector3(0, 10, 0), Quaternion.Identity, MotionType.Dynamic, Layers.Moving);
+
+            // Create capsule
+            float mHeightStanding = 1.35f;
+            float mRadiusStanding = 0.3f;
+
+            CapsuleShape capsule = new(0.5f * mHeightStanding, mRadiusStanding);
+
+            CharacterVirtualSettings characterSettings = new();
+            characterSettings.Shape = new RotatedTranslatedShapeSettings(new Vector3(0, 0.5f * mHeightStanding + mRadiusStanding, 0), Quaternion.Identity, capsule).Create();
+
+            // Configure supporting volume
+            characterSettings.SupportingVolume = new Plane(Vector3.UnitY, -mHeightStanding); // Accept contacts that touch the lower sphere of the capsule
+
+
+            CharacterVirtual character = new(characterSettings, new Vector3(0, 0, 0), Quaternion.Identity, 0, physicsSystem);
 
             // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
             const float deltaTime = 1.0f / 60.0f;
@@ -259,6 +273,9 @@ public static class Program
                 // Output current position and velocity of the sphere
                 Vector3 position = bodyInterface.GetCenterOfMassPosition(sphereID);
                 Vector3 velocity = bodyInterface.GetLinearVelocity(sphereID);
+                //Matrix4x4 transform = bodyInterface.GetWorldTransform(sphereID);
+                //Vector3 translation = bodyInterface.GetWorldTransform(sphereID).Translation;
+                //Matrix4x4 centerOfMassTransform = bodyInterface.GetCenterOfMassTransform(sphereID);
                 Console.WriteLine($"Step {step} : Position = ({position}), Velocity = ({velocity})");
 
                 // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
@@ -284,7 +301,7 @@ public static class Program
     }
 
 
-    private static ValidateResult OnContactValidate(PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, IntPtr collisionResult)
+    private static ValidateResult OnContactValidate(PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, nint collisionResult)
     {
         Console.WriteLine("Contact validate callback");
 
@@ -292,12 +309,12 @@ public static class Program
         return ValidateResult.AcceptAllContactsForThisBodyPair;
     }
 
-    private static void OnContactAdded(PhysicsSystem system, in Body body1, in Body body2)
+    private static void OnContactAdded(PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings)
     {
         Console.WriteLine("A contact was added");
     }
 
-    private static void OnContactPersisted(PhysicsSystem system, in Body body1, in Body body2)
+    private static void OnContactPersisted(PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings)
     {
         Console.WriteLine("A contact was persisted");
     }

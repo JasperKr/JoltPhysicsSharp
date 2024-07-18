@@ -11,13 +11,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_INSTALL_MESSAGE LAZY)
 
-# Configure CMake global variables
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for OS X")
+
+# Determine if engine is built as a subproject (using add_subdirectory)
+# or if it is the master project.
+if (NOT DEFINED JPH_MASTER_PROJECT)
+    set(JPH_MASTER_PROJECT OFF)
+    if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+        set(JPH_MASTER_PROJECT ON)
+        message(STATUS "CMake version: ${CMAKE_VERSION}")
+    endif ()
+endif ()
+
+if (JPH_MASTER_PROJECT)
+	# Configure CMake global variables
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+endif()
+
+include(CMakeDependentOption)
+include(GNUInstallDirs)
+include(FetchContent)
+
+# When turning this option on, the library will be compiled using assertions. By default asserts are enabled in Debug build.
+option(USE_ASSERTS "Enable asserts" OFF)
 
 # When turning this option on, the library will be compiled using doubles for positions. This allows for much bigger worlds.
 option(DOUBLE_PRECISION "Use double precision math" OFF)
@@ -38,20 +57,17 @@ option(CROSS_COMPILE_ARM "Cross compile to aarch64-linux-gnu" OFF)
 option(BUILD_SHARED_LIBS "Compile Jolt as a shared library" OFF)
 
 # When turning this option on, the library will be compiled with interprocedural optimizations enabled, also known as link-time optimizations or link-time code generation.
-# Note that if you turn this on you need to use SET_INTERPROCEDURAL_OPTIMIZATION() or set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON) to enable LTO specificly for your own project as well.
+# Note that if you turn this on you need to use SET_INTERPROCEDURAL_OPTIMIZATION() or set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON) to enable LTO specifically for your own project as well.
 # If you don't do this you may get an error: /usr/bin/ld: libJolt.a: error adding symbols: file format not recognized
 option(INTERPROCEDURAL_OPTIMIZATION "Enable interprocedural optimizations" ON)
 
-# When turning this on, in Debug and Release mode, the library will emit extra code to ensure that the 4th component of a 3-vector is kept the same as the 3rd component 
-# and will enable floating point exceptions during simulation to detect divisions by zero. 
+# When turning this on, in Debug and Release mode, the library will emit extra code to ensure that the 4th component of a 3-vector is kept the same as the 3rd component
+# and will enable floating point exceptions during simulation to detect divisions by zero.
 # Note that this currently only works using MSVC. Clang turns Float2 into a SIMD vector sometimes causing floating point exceptions (the option is ignored).
 option(FLOATING_POINT_EXCEPTIONS_ENABLED "Enable floating point exceptions" ON)
 
 # Number of bits to use in ObjectLayer. Can be 16 or 32.
 option(OBJECT_LAYER_BITS "Number of bits in ObjectLayer" 16)
-
-# https://devblogs.microsoft.com/cppblog/spectre-mitigations-in-msvc/
-option(ENABLE_SPECTRE_MITIGATION "Build using /Qspectre for MSVC" OFF)
 
 # Select X86 processor features to use (if everything is off it will be SSE2 compatible)
 option(USE_SSE4_1 "Enable SSE4.1" ON)
@@ -64,6 +80,10 @@ option(USE_TZCNT "Enable TZCNT" ON)
 option(USE_F16C "Enable F16C" ON)
 option(USE_FMADD "Enable FMADD" ON)
 
+# Enable SIMD for the WASM build. Note that this is currently off by default since not all browsers support this.
+# See: https://caniuse.com/?search=WebAssembly%20SIMD (Safari got support in March 2023 and was the last major browser to get support).
+option(USE_WASM_SIMD "Enable SIMD for WASM" OFF)
+
 # Enable all warnings
 option(ENABLE_ALL_WARNINGS "Enable all warnings and warnings as errors" OFF)
 
@@ -73,24 +93,61 @@ option(TRACK_BROADPHASE_STATS "Track Broadphase Stats" OFF)
 # Setting to periodically trace narrowphase stats to help determine which collision queries could be optimized
 option(TRACK_NARROWPHASE_STATS "Track Narrowphase Stats" OFF)
 
-include(CMakeDependentOption)
-include(GNUInstallDirs)
+# Enable the debug renderer in the Debug and Release builds. Note that DEBUG_RENDERER_IN_DISTRIBUTION will override this setting.
+option(DEBUG_RENDERER_IN_DEBUG_AND_RELEASE "Enable debug renderer in Debug and Release builds" ON)
+
+# Setting to enable the debug renderer in all builds.
+# Note that enabling this reduces the performance of the library even if you're not drawing anything.
+option(DEBUG_RENDERER_IN_DISTRIBUTION "Enable debug renderer in all builds" OFF)
+
+# Enable the profiler in Debug and Release builds. Note that PROFILER_IN_DISTRIBUTION will override this setting.
+option(PROFILER_IN_DEBUG_AND_RELEASE "Enable the profiler in Debug and Release builds" ON)
+
+# Enable the profiler in all builds.
+# Note that enabling this reduces the performance of the library.
+option(PROFILER_IN_DISTRIBUTION "Enable the profiler in all builds" OFF)
+
+# Setting this option will force the library to use malloc/free instead of allowing the user to override the memory allocator
+option(DISABLE_CUSTOM_ALLOCATOR "Disable support for a custom memory allocator" OFF)
+
+# Setting this option will force the library to use the STL vector instead of the custom Array class
+option(USE_STD_VECTOR "Use std::vector instead of own Array class" OFF)
+
+# Setting this option will compile the ObjectStream class and RTTI attribute information
+option(ENABLE_OBJECT_STREAM "Compile the ObjectStream class and RTTI attribute information" ON)
 
 # Ability to toggle between the static and DLL versions of the MSVC runtime library
 # Windows Store only supports the DLL version
 cmake_dependent_option(USE_STATIC_MSVC_RUNTIME_LIBRARY "Use the static MSVC runtime library" ON "MSVC;NOT WINDOWS_STORE" OFF)
 
+option(JPH_SAMPLES "Build samples" ${JPH_MASTER_PROJECT})
+
 # Determine which configurations exist
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Distribution")
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-	set(CMAKE_CONFIGURATION_TYPES "Debug;Release;ReleaseASAN;ReleaseUBSAN;ReleaseCoverage;Distribution")
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR) # Only do this when we're at the top level, see: https://gitlab.kitware.com/cmake/cmake/-/issues/24181
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Distribution")
+	elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+		set(CMAKE_CONFIGURATION_TYPES "Debug;Release;ReleaseASAN;ReleaseUBSAN;ReleaseCoverage;Distribution")
+	endif()
+endif()
+
+FetchContent_Declare(
+        JoltPhysics
+        GIT_REPOSITORY "https://github.com/jrouwe/JoltPhysics"
+        GIT_TAG "fe9dbbbe1b873dbbc856320750692f185081e14d"
+		SOURCE_SUBDIR "Build"
+)
+FetchContent_MakeAvailable(JoltPhysics)
+
+if (XCODE)
+	# Ensure that we enable SSE4.2 for the x86_64 build, XCode builds multiple architectures
+	set_property(TARGET Jolt PROPERTY XCODE_ATTRIBUTE_OTHER_CPLUSPLUSFLAGS[arch=x86_64] "$(inherited) -msse4.2 -mpopcnt")
 endif()
 
 if (MSVC)
 	# Fill in the path to the asan libraries
 	set(CLANG_LIB_PATH "\"$(VSInstallDir)\\VC\\Tools\\Llvm\\x64\\lib\\clang\\${CMAKE_CXX_COMPILER_VERSION}\\lib\\windows\"")
-	
+
 	# 64 bit architecture
 	set(CMAKE_VS_PLATFORM_TOOLSET_HOST_ARCHITECTURE "x64")
 
@@ -101,7 +158,7 @@ if (MSVC)
 
 	# Set general compiler flags
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /Gm- /MP /nologo /diagnostics:classic /FC /fp:except- /Zc:inline")
-	
+
 	# Enable warnings
 	if (ENABLE_ALL_WARNINGS)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall /WX")
@@ -124,14 +181,17 @@ if (MSVC)
 	endif()
 
 	# Set compiler flags for various configurations
-	set(CMAKE_CXX_FLAGS_DEBUG "/GS /Od /Ob0 /RTC1")
-	set(CMAKE_CXX_FLAGS_RELEASE "/GS- /Gy /O2 /Oi /Ot")
-	set(CMAKE_CXX_FLAGS_DISTRIBUTION "/GS- /Gy /O2 /Oi /Ot")
+	if (OVERRIDE_CXX_FLAGS)
+		set(CMAKE_CXX_FLAGS_DEBUG "/GS /Od /Ob0 /RTC1")
+		set(CMAKE_CXX_FLAGS_RELEASE "/GS- /Gy /O2 /Oi /Ot")
+		set(CMAKE_CXX_FLAGS_DISTRIBUTION "/GS- /Gy /O2 /Oi /Ot")
+	endif()
+
+	set(CMAKE_CXX_FLAGS_DISTRIBUTION "${CMAKE_CXX_FLAGS_RELEASE}")
 	set(CMAKE_CXX_FLAGS_RELEASEASAN "-fsanitize=address /Od")
 	set(CMAKE_CXX_FLAGS_RELEASEUBSAN "-fsanitize=undefined,implicit-conversion,float-divide-by-zero,local-bounds -fno-sanitize-recover=all")
-	set(CMAKE_CXX_FLAGS_RELEASECOVERAGE "-O0 -DJPH_NO_FORCE_INLINE -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_CXX_FLAGS_RELEASECOVERAGE "-fprofile-instr-generate -fcoverage-mapping")
 
-	# Set linker flags
 	# Set linker flags
 	set(CMAKE_EXE_LINKER_FLAGS "/SUBSYSTEM:WINDOWS /ignore:4221")
 	if (GENERATE_DEBUG_SYMBOLS)
@@ -175,6 +235,11 @@ else()
 		endif()
 	endif()
 
+	# See https://github.com/jrouwe/JoltPhysics/issues/922. When compiling with DOUBLE_PRECISION=YES and CMAKE_OSX_DEPLOYMENT_TARGET=10.12 clang triggers a warning that we silence here.
+	if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
+	endif()
+
 	# Cross compiler flags
 	if (CROSS_COMPILE_ARM)
 		set(CMAKE_CXX_FLAGS "--target=aarch64-linux-gnu ${CMAKE_CXX_FLAGS}")
@@ -198,49 +263,12 @@ endif()
 
 # Set linker flags
 set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTION "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-
-# Enable link time optimization in Release and Distribution mode if requested and available
-function(SET_INTERPROCEDURAL_OPTIMIZATION)
-	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF PARENT_SCOPE)
-	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DISTRIBUTION OFF PARENT_SCOPE)
-
-	# On ARM, whole program optimization triggers an internal compiler error during code gen, so we don't turn it on
-	if (INTERPROCEDURAL_OPTIMIZATION AND NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64") AND NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM"))
-		include(CheckIPOSupported)
-		check_ipo_supported(RESULT IS_IPO_SUPPORTED OUTPUT IPO_CHECK_OUTPUT)
-
-		if (IS_IPO_SUPPORTED)
-			set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON PARENT_SCOPE)
-			set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DISTRIBUTION ON PARENT_SCOPE)
-		else()
-			message(WARNING "Interprocedural optimizations are not supported: ${IPO_CHECK_OUTPUT}")
-		endif()
-	endif()
-endfunction()
-SET_INTERPROCEDURAL_OPTIMIZATION()
-
-# Set linker flags
 set(CMAKE_SHARED_LINKER_FLAGS_DISTRIBUTION "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
-set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTION "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+
+SET_INTERPROCEDURAL_OPTIMIZATION()
 
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/src/joltc)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Disable shared library when building Jolt" FORCE)
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/src/joltc/Jolt/Jolt.cmake)
-if (XCODE)
-	# Ensure that we enable SSE4.2 for the x86_64 build, XCode builds multiple architectures
-	set_property(TARGET Jolt PROPERTY XCODE_ATTRIBUTE_OTHER_CPLUSPLUSFLAGS[arch=x86_64] "$(inherited) -msse4.2 -mpopcnt") 
-endif()
-
-# Install Jolt library and includes
-install(TARGETS Jolt DESTINATION lib)
-foreach(SRC_FILE ${JOLT_PHYSICS_SRC_FILES})
-	string(REPLACE ${PHYSICS_REPO_ROOT} "" RELATIVE_SRC_FILE ${SRC_FILE})
-	get_filename_component(DESTINATION_PATH ${RELATIVE_SRC_FILE} DIRECTORY)
-	if (NOT RELATIVE_SRC_FILE MATCHES "\.cpp")
-		install(FILES ${SRC_FILE} DESTINATION include/${DESTINATION_PATH})
-	endif()
-endforeach()
 
 # Options
 if (IOS OR EMSCRIPTEN)
@@ -250,7 +278,10 @@ else()
 endif()
 
 add_subdirectory(src/joltc)
-add_subdirectory(src/samples/HelloWorldNative)
+
+if (JPH_SAMPLES)
+	add_subdirectory(src/samples/HelloWorldNative)
+endif ()
 
 if (CMAKE_GENERATOR_PLATFORM)
     message(STATUS "CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
